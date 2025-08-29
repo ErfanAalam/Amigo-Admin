@@ -66,7 +66,7 @@ async function createAdmin() {
     console.log('🆔 UID:', userRecord.uid);
     console.log('🔑 Password:', password);
     console.log('\n⚠️  Important: Save these credentials securely!');
-    console.log('🚀 You can now login to the admin dashboard at http://localhost:3000');
+    console.log('🚀 You can now login to the admin dashboard at https://amigo-admin-eight.vercel.app/');
     
   } catch (error) {
     console.error('❌ Error creating admin:', error.message);

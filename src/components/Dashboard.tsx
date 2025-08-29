@@ -14,7 +14,7 @@ enum TabType {
   MANAGE_GROUPS = 'manage_groups',
   MANAGE_CHATS = 'manage_chats',
   NOTIFICATIONS = 'notifications',
-  AGORA_TOKENS = 'agora_tokens',
+  // AGORA_TOKENS = 'agora_tokens',
 }
 
 interface User {
@@ -91,7 +91,7 @@ export default function Dashboard() {
     { id: TabType.MANAGE_GROUPS, label: 'Manage Groups', icon: '👥' },
     { id: TabType.MANAGE_CHATS, label: 'Manage Chats', icon: '💬' },
     { id: TabType.NOTIFICATIONS, label: 'Notifications', icon: '🔔' },
-    { id: TabType.AGORA_TOKENS, label: 'Agora Tokens', icon: '📞' },
+    // { id: TabType.AGORA_TOKENS, label: 'Agora Tokens', icon: '📞' },
   ];
 
   return (
@@ -167,7 +167,7 @@ export default function Dashboard() {
           )}
           {activeTab === TabType.MANAGE_CHATS && <ManageChatsTab />}
           {activeTab === TabType.NOTIFICATIONS && <NotificationTab />}
-          {activeTab === TabType.AGORA_TOKENS && <AgoraTokenTab />}
+          {/* {activeTab === TabType.AGORA_TOKENS && <AgoraTokenTab />} */}
         </div>
       </div>
     </div>

@@ -46,7 +46,7 @@ export async function generateAgoraToken(
     const customToken = await auth.createCustomToken(adminUid);
     
     // Make request to token server
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/agora/token`, {
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'https://amigo-admin-eight.vercel.app'}/api/agora/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
