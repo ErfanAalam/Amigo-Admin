@@ -42,7 +42,7 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
     // Get the authorization header
@@ -63,7 +63,8 @@ export async function GET(
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
-    const { chatId } = params;
+    // Await the params for Next.js 15 compatibility
+    const { chatId } = await params;
     const db = getFirebaseAdminFirestore();
     let messages: any[] = [];
     let chatType = 'unknown';
@@ -137,71 +138,49 @@ export async function GET(
         const [groupId, innerGroupId] = chatId.split('_');
         console.log(`Trying to find inner group chat with groupId: ${groupId}, innerGroupId: ${innerGroupId}`);
         
-        // Check if this is an inner group chat stored in chats collection
-        const innerGroupChatDoc = await db.collection('chats').doc(chatId).get();
-        if (innerGroupChatDoc.exists) {
-          console.log('Found inner group chat document by pattern, checking messages subcollection');
-          const messagesSnapshot = await db.collection('chats').doc(chatId).collection('messages').get();
-          if (!messagesSnapshot.empty) {
-            messagesSnapshot.forEach(doc => {
-              messages.push({ id: doc.id, ...doc.data() });
-            });
-            chatType = 'innerGroup';
-            console.log(`Found ${messages.length} messages in inner group subcollection by pattern`);
+        // Check if the group exists
+        const groupDoc = await db.collection('groups').doc(groupId).get();
+        if (groupDoc.exists) {
+          // Check if the inner group exists
+          const innerGroupDoc = await db.collection('groups').doc(groupId).collection('innerGroups').doc(innerGroupId).get();
+          if (innerGroupDoc.exists) {
+            console.log('Found inner group document, checking messages subcollection');
+            const messagesSnapshot = await db.collection('groups').doc(groupId).collection('innerGroups').doc(innerGroupId).collection('messages').get();
+            if (!messagesSnapshot.empty) {
+              messagesSnapshot.forEach(doc => {
+                messages.push({ id: doc.id, ...doc.data() });
+              });
+              chatType = 'innerGroup';
+              console.log(`Found ${messages.length} messages in inner group subcollection`);
+            }
           }
         }
       } catch (error) {
-        console.log('Search by groupId-innerGroupId pattern failed:', error);
+        console.log('Inner group chat not found or error:', error);
       }
     }
 
-    console.log(`Final result - Chat type: ${chatType}, Messages found: ${messages.length}`);
+    if (messages.length === 0) {
+      return NextResponse.json({ 
+        error: 'Chat not found or no messages found',
+        chatId,
+        chatType: 'unknown'
+      }, { status: 404 });
+    }
 
-    // Process messages to include user information
-    const processedMessages = await Promise.all(
-      messages.map(async (message) => {
-        let userName = 'Unknown User';
-        let userEmail = 'N/A';
-        
-        if (message.senderId) {
-          try {
-            const userDoc = await db.collection('users').doc(message.senderId).get();
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              userName = userData?.displayName || 'Anonymous';
-              userEmail = userData?.email || 'N/A';
-            }
-          } catch (error) {
-            console.log('User not found for message sender:', error);
-          }
-        }
-
-        return {
-          id: message.id || message.timestamp,
-          text: message.text || message.content || '',
-          senderId: message.senderId,
-          senderName: userName,
-          senderEmail: userEmail,
-          timestamp: message.timestamp?.toDate?.() || message.timestamp || new Date(),
-          type: message.messageType || message.type || 'text',
-          mediaUrl: message.mediaUrl || null,
-          mediaType: message.mediaType || null,
-        };
-      })
-    );
-
-    // Sort messages by timestamp
-    processedMessages.sort((a, b) => {
-      const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
-      const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
-      return dateA.getTime() - dateB.getTime();
+    // Sort messages by timestamp (oldest first)
+    messages.sort((a, b) => {
+      const timestampA = a.timestamp?.toDate?.() || a.timestamp || 0;
+      const timestampB = b.timestamp?.toDate?.() || b.timestamp || 0;
+      return timestampA - timestampB;
     });
 
     return NextResponse.json({ 
-      success: true, 
-      messages: processedMessages,
-      total: processedMessages.length,
-      chatType: chatType
+      success: true,
+      chatId,
+      chatType,
+      messageCount: messages.length,
+      messages: messages
     });
 
   } catch (error) {

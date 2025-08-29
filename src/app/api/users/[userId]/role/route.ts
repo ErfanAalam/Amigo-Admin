@@ -3,7 +3,7 @@ import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../../../
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Get the authorization header
@@ -24,7 +24,8 @@ export async function PUT(
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
-    const { userId } = params;
+    // Await the params for Next.js 15 compatibility
+    const { userId } = await params;
     const { role } = await request.json();
 
     // Validate role

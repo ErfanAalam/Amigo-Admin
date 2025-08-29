@@ -3,7 +3,7 @@ import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../../../
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { chatId: string; messageId: string } }
+  { params }: { params: Promise<{ chatId: string; messageId: string }> }
 ) {
   try {
     // Get the authorization header
@@ -24,7 +24,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
-    const { chatId, messageId } = params;
+    // Await the params for Next.js 15 compatibility
+    const { chatId, messageId } = await params;
     const db = getFirebaseAdminFirestore();
 
     // Try to delete from chats collection first (direct chats and inner group chats)
