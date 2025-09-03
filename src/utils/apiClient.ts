@@ -102,6 +102,43 @@ class ApiClient {
     });
   }
 
+  // Standalone inner group management
+  async getStandaloneInnerGroups() {
+    return this.makeRequest('/inner-groups');
+  }
+
+  async createStandaloneInnerGroup(innerGroupData: { 
+    name: string; 
+    description?: string;
+    startTime: string; 
+    endTime: string; 
+    members: string[] 
+  }) {
+    return this.makeRequest('/inner-groups', {
+      method: 'POST',
+      body: JSON.stringify(innerGroupData),
+    });
+  }
+
+  async updateStandaloneInnerGroup(innerGroupId: string, innerGroupData: { 
+    name: string; 
+    description?: string;
+    startTime: string; 
+    endTime: string; 
+    members: string[] 
+  }) {
+    return this.makeRequest(`/inner-groups/${innerGroupId}`, {
+      method: 'PUT',
+      body: JSON.stringify(innerGroupData),
+    });
+  }
+
+  async deleteStandaloneInnerGroup(innerGroupId: string) {
+    return this.makeRequest(`/inner-groups/${innerGroupId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async deleteGroup(groupId: string) {
     return this.makeRequest(`/groups?groupId=${groupId}`, {
       method: 'DELETE',

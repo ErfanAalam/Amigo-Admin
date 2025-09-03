@@ -16,6 +16,7 @@ interface User {
   currentLocation?: {
     latitude: number;
     longitude: number;
+    ipAddress: string;
     country: string;
     state: string;
     city: string;
@@ -48,9 +49,39 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
     newValue: any;
     message: string;
   } | null>(null);
+  const [lastUserCount, setLastUserCount] = useState(users.length);
 
   // Ensure users is always an array
   const safeUsers = Array.isArray(users) ? users : [];
+
+  // Listen for real-time updates
+  React.useEffect(() => {
+    if (users.length !== lastUserCount && lastUserCount > 0) {
+      // Data has been updated automatically
+      showNotification('success', `Data updated in real-time - ${users.length} users loaded`);
+    }
+    setLastUserCount(users.length);
+  }, [users, lastUserCount]);
+
+  // Listen for individual user data changes
+  React.useEffect(() => {
+    if (users.length > 0 && lastUserCount > 0) {
+      // Check for changes in user data (online status, roles, etc.)
+      const hasUserDataChanges = users.some((user, index) => {
+        const previousUser = safeUsers[index];
+        return previousUser && (
+          user.isOnline !== previousUser.isOnline ||
+          user.role !== previousUser.role ||
+          user.callAccess !== previousUser.callAccess ||
+          user.lastSeen !== previousUser.lastSeen
+        );
+      });
+      
+      if (hasUserDataChanges) {
+        showNotification('success', 'User data updated in real-time');
+      }
+    }
+  }, [users, lastUserCount, safeUsers]);
   
   const filteredUsers = safeUsers.filter(user =>
     user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -239,6 +270,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
             <div>
               <p className="text-blue-600 text-sm font-medium">Total Users</p>
               <p className="text-3xl font-bold text-blue-900">{users.length}</p>
+              <div className="flex items-center space-x-1 mt-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600">Live</span>
+              </div>
             </div>
             <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
               <span className="text-white text-xl">👥</span>
@@ -253,6 +288,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
               <p className="text-3xl font-bold text-green-900">
                 {users.filter(user => user.isOnline).length}
               </p>
+              <div className="flex items-center space-x-1 mt-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-600">Live</span>
+              </div>
             </div>
             <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
               <span className="text-white text-xl">🟢</span>
@@ -267,6 +306,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
               <p className="text-3xl font-bold text-purple-900">
                 {users.filter(user => user.role === 'subadmin').length}
               </p>
+              <div className="flex items-center space-x-1 mt-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-purple-600">Live</span>
+              </div>
             </div>
             <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
               <span className="text-white text-xl">🛡️</span>
@@ -281,6 +324,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
               <p className="text-3xl font-bold text-orange-900">
                 {users.filter(user => user.callAccess).length}
               </p>
+              <div className="flex items-center space-x-1 mt-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-orange-600">Live</span>
+              </div>
             </div>
             <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
               <span className="text-white text-xl">📞</span>
@@ -295,7 +342,11 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-              <p className="text-gray-600 mt-1">Manage and monitor all registered users</p>
+              <p className="text-gray-600 mt-1">Real-time monitoring of all registered users</p>
+              <div className="flex items-center space-x-2 mt-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-600 font-medium">Live updates active</span>
+              </div>
             </div>
             <div className="relative w-full sm:w-80">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -380,7 +431,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
                     {formatDate(user.createdAt)}
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(user.lastSeen)}
+                    {formatDate(user.lastSeen) || 'online'}
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap">
                     {user.currentLocation ? (
@@ -485,6 +536,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
                       <span className="text-black">Longitude:</span>
                       <span className="font-mono text-black">{selectedUser.currentLocation?.longitude?.toFixed(8) || 'N/A'}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-black">IP Address:</span>
+                      <span className="font-mono text-black">{selectedUser.currentLocation?.ipAddress || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -503,7 +558,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, loading, error, onRe
                     </div>
                     <div className="flex justify-between">
                       <span className="text-black">Last Seen:</span>
-                      <span className="font-medium text-black">{formatDate(selectedUser.lastSeen)}</span>
+                      <span className="font-medium text-black">{formatDate(selectedUser.lastSeen) || 'online'}</span>
                     </div>
                   </div>
                 </div>

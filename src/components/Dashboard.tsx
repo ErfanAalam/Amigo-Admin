@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/apiClient';
 import DashboardTab from './DashboardTab';
@@ -29,6 +29,7 @@ interface User {
   currentLocation?: {
     latitude: number;
     longitude: number;
+    ipAddress: string;
     country: string;
     state: string;
     city: string;
@@ -36,6 +37,8 @@ interface User {
     timestamp: any;
   };
   lastLocationUpdate?: any;
+  role?: 'user' | 'subadmin' | 'admin';
+  callAccess?: boolean;
 }
 
 export default function Dashboard() {
@@ -45,35 +48,63 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // Real-time update mechanism
+  const [updateInterval, setUpdateInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       
       const response = await apiClient.getUsers();
       
       if (response && response.success && Array.isArray(response.users)) {
-        console.log('Users fetched successfully:', response.users);
-        console.log('First user object:', response.users[0]);
-        console.log('First user uid:', response.users[0]?.uid);
-        setUsers(response.users);
+        // console.log('Users fetched successfully:', response.users);
+        
+        // Check if data has actually changed to avoid unnecessary re-renders
+        const hasChanges = JSON.stringify(users) !== JSON.stringify(response.users);
+        if (hasChanges) {
+          console.log('User data has changed, updating state...');
+          setUsers(response.users);
+        }
       } else {
         console.error('Invalid response structure:', response);
         setError('Failed to fetch users - invalid response structure');
-        setUsers([]); // Ensure users is always an array
+        setUsers([]);
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setError(error.message || 'Failed to fetch users');
-      setUsers([]); // Ensure users is always an array
+      setUsers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [users]);
+
+  // Initialize real-time updates
+  useEffect(() => {
+    // Initial fetch
+    fetchUsers();
+    
+    // Set up real-time updates every 2 seconds for instant responsiveness
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 2000);
+    
+    setUpdateInterval(interval);
+
+    // Cleanup on unmount
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [fetchUsers]);
+
+  // Manual refresh function for user actions
+  const handleManualRefresh = useCallback(() => {
+    console.log('Manual refresh triggered');
+    fetchUsers();
+  }, [fetchUsers]);
 
   if (!user) {
     return (
@@ -113,6 +144,14 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Real-time status indicator */}
+              <div className="flex items-center space-x-2 text-xs text-gray-500 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Real-time updates active</span>
+                <span>•</span>
+                <span>2s refresh</span>
+              </div>
+              
               <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-4 py-2">
                 <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-semibold">
@@ -159,7 +198,7 @@ export default function Dashboard() {
               users={users} 
               loading={loading} 
               error={error} 
-              onRefresh={fetchUsers} 
+              onRefresh={handleManualRefresh} 
             />
           )}
           {activeTab === TabType.MANAGE_GROUPS && (
