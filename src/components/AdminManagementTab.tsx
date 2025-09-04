@@ -349,19 +349,7 @@ const AdminManagementTab: React.FC<AdminManagementTabProps> = ({ currentAdminUid
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl p-6 border border-purple-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            {/* <div>
-              <p className="text-purple-600 text-sm font-medium">Sub Admins</p>
-              <p className="text-3xl font-bold text-purple-900">
-                {admins.filter(admin => admin.role === 'subadmin').length}
-              </p>
-            </div> */}
-            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-              <User className="text-white text-xl" />
-            </div>
-          </div>
-        </div>
+       
       </div>
 
       {/* Admins Table */}
