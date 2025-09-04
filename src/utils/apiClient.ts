@@ -172,6 +172,50 @@ class ApiClient {
     });
   }
 
+  // Admin management
+  async getAdmins() {
+    return this.makeRequest('/admins');
+  }
+
+  async createAdmin(adminData: {
+    email: string;
+    password: string;
+    role: 'admin' | 'subadmin';
+    permissions: string[];
+  }) {
+    return this.makeRequest('/admins', {
+      method: 'POST',
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async updateAdmin(adminId: string, adminData: {
+    role: 'admin' | 'subadmin';
+    permissions: string[];
+  }) {
+    return this.makeRequest(`/admins/${adminId}`, {
+      method: 'PUT',
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async deleteAdmin(adminId: string) {
+    return this.makeRequest(`/admins/${adminId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateAdminStatus(adminId: string, isActive: boolean) {
+    return this.makeRequest(`/admins/${adminId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive }),
+    });
+  }
+
+  async getAdminPermissions() {
+    return this.makeRequest('/admins/permissions');
+  }
+
   // Authentication
   async verifyAuth() {
     const token = await this.getAuthToken();

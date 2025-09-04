@@ -3,10 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/apiClient';
+import { checkAdminPermissions, getAvailableTabs, AdminPermissions } from '../utils/adminPermissions';
+import { LogOut, User } from 'lucide-react';
 import DashboardTab from './DashboardTab';
 import ManageGroupsTab from './ManageGroupsTab';
 import ManageChatsTab from './ManageChatsTab';
 import NotificationTab from './NotificationTab';
+import AdminManagementTab from './AdminManagementTab';
 import AgoraTokenTab from './AgoraTokenTab';
 
 enum TabType {
@@ -14,6 +17,7 @@ enum TabType {
   MANAGE_GROUPS = 'manage_groups',
   MANAGE_CHATS = 'manage_chats',
   NOTIFICATIONS = 'notifications',
+  ADMIN_MANAGEMENT = 'admin_management',
   // AGORA_TOKENS = 'agora_tokens',
 }
 
@@ -42,11 +46,13 @@ interface User {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>(TabType.DASHBOARD);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adminPermissions, setAdminPermissions] = useState<AdminPermissions | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Real-time update mechanism
   const [updateInterval, setUpdateInterval] = useState<NodeJS.Timeout | null>(null);
@@ -58,12 +64,10 @@ export default function Dashboard() {
       const response = await apiClient.getUsers();
       
       if (response && response.success && Array.isArray(response.users)) {
-        // console.log('Users fetched successfully:', response.users);
         
         // Check if data has actually changed to avoid unnecessary re-renders
         const hasChanges = JSON.stringify(users) !== JSON.stringify(response.users);
         if (hasChanges) {
-          console.log('User data has changed, updating state...');
           setUsers(response.users);
         }
       } else {
@@ -80,7 +84,7 @@ export default function Dashboard() {
     }
   }, [users]);
 
-  // Initialize real-time updates
+  // Initialize real-time updates and permissions
   useEffect(() => {
     // Initial fetch
     fetchUsers();
@@ -100,11 +104,52 @@ export default function Dashboard() {
     };
   }, [fetchUsers]);
 
+  // Check admin permissions when user changes
+  useEffect(() => {
+    const fetchAdminPermissions = async () => {
+      if (user) {
+        try {
+          const response = await apiClient.getAdminPermissions();
+          if (response && response.success) {
+            const permissions = checkAdminPermissions(user.uid, response.permissions);
+            setAdminPermissions(permissions);
+          } else {
+            // Fallback to hardcoded permissions if API fails
+            const permissions = checkAdminPermissions(user.uid, []);
+            setAdminPermissions(permissions);
+          }
+        } catch (error) {
+          console.error('Error fetching admin permissions:', error);
+          // Fallback to hardcoded permissions if API fails
+          const permissions = checkAdminPermissions(user.uid, []);
+          setAdminPermissions(permissions);
+        }
+      }
+    };
+
+    fetchAdminPermissions();
+  }, [user]);
+
   // Manual refresh function for user actions
   const handleManualRefresh = useCallback(() => {
-    console.log('Manual refresh triggered');
     fetchUsers();
   }, [fetchUsers]);
+
+  // Logout handler
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      setIsLoggingOut(true);
+      try {
+        await logout();
+        // The AuthContext will handle redirecting to login
+      } catch (error) {
+        console.error('Error during logout:', error);
+        alert('Error during logout. Please try again.');
+      } finally {
+        setIsLoggingOut(false);
+      }
+    }
+  };
 
   if (!user) {
     return (
@@ -117,13 +162,15 @@ export default function Dashboard() {
     );
   }
 
-  const tabs = [
+  // Get available tabs based on permissions
+  const tabs = adminPermissions ? getAvailableTabs(adminPermissions) : [
     { id: TabType.DASHBOARD, label: 'Dashboard', icon: '📊' },
     { id: TabType.MANAGE_GROUPS, label: 'Manage Groups', icon: '👥' },
     { id: TabType.MANAGE_CHATS, label: 'Manage Chats', icon: '💬' },
     { id: TabType.NOTIFICATIONS, label: 'Notifications', icon: '🔔' },
-    // { id: TabType.AGORA_TOKENS, label: 'Agora Tokens', icon: '📞' },
   ];
+
+  // Debug logging
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -144,14 +191,6 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Real-time status indicator */}
-              <div className="flex items-center space-x-2 text-xs text-gray-500 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Real-time updates active</span>
-                <span>•</span>
-                <span>2s refresh</span>
-              </div>
-              
               <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-4 py-2">
                 <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-semibold">
@@ -163,6 +202,23 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-500">Administrator</p>
                 </div>
               </div>
+              
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="inline-flex items-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Logout"
+              >
+                {isLoggingOut ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                ) : (
+                  <LogOut className="h-4 w-4 mr-2" />
+                )}
+                <span className="hidden sm:inline">
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -193,7 +249,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className=" mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {activeTab === TabType.DASHBOARD && (
+          {activeTab === TabType.DASHBOARD && adminPermissions?.canAccessDashboard && (
             <DashboardTab 
               users={users} 
               loading={loading} 
@@ -201,11 +257,14 @@ export default function Dashboard() {
               onRefresh={handleManualRefresh} 
             />
           )}
-          {activeTab === TabType.MANAGE_GROUPS && (
+          {activeTab === TabType.MANAGE_GROUPS && adminPermissions?.canManageGroups && (
             <ManageGroupsTab users={users} />
           )}
-          {activeTab === TabType.MANAGE_CHATS && <ManageChatsTab />}
-          {activeTab === TabType.NOTIFICATIONS && <NotificationTab />}
+          {activeTab === TabType.MANAGE_CHATS && adminPermissions?.canManageChats && <ManageChatsTab />}
+          {activeTab === TabType.NOTIFICATIONS && adminPermissions?.canManageNotifications && <NotificationTab />}
+          {activeTab === TabType.ADMIN_MANAGEMENT && adminPermissions?.canManageAdmins && (
+            <AdminManagementTab currentAdminUid={user.uid} />
+          )}
           {/* {activeTab === TabType.AGORA_TOKENS && <AgoraTokenTab />} */}
         </div>
       </div>

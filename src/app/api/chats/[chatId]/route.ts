@@ -69,25 +69,25 @@ export async function GET(
     let messages: any[] = [];
     let chatType = 'unknown';
 
-    console.log(`Searching for chat with ID: ${chatId}`);
+    
 
     // Try to find messages in different collections based on chat type
     try {
       // Check direct chats first - messages are in subcollection
       const directChatDoc = await db.collection('chats').doc(chatId).get();
       if (directChatDoc.exists) {
-        console.log('Found direct chat document, checking messages subcollection');
+        
         const messagesSnapshot = await db.collection('chats').doc(chatId).collection('messages').get();
         if (!messagesSnapshot.empty) {
           messagesSnapshot.forEach(doc => {
             messages.push({ id: doc.id, ...doc.data() });
           });
           chatType = 'direct';
-          console.log(`Found ${messages.length} messages in direct chat subcollection`);
+          
         }
       }
     } catch (error) {
-      console.log('Direct chat not found or error:', error);
+      
     }
 
     // If no messages found in direct chats, check group chats
@@ -96,18 +96,18 @@ export async function GET(
         // Check if this is a group chat - messages are in subcollection
         const groupDoc = await db.collection('groups').doc(chatId).get();
         if (groupDoc.exists) {
-          console.log('Found group document, checking messages subcollection');
+          
           const messagesSnapshot = await db.collection('groups').doc(chatId).collection('messages').get();
           if (!messagesSnapshot.empty) {
             messagesSnapshot.forEach(doc => {
               messages.push({ id: doc.id, ...doc.data() });
             });
             chatType = 'group';
-            console.log(`Found ${messages.length} messages in group subcollection`);
+            
           }
         }
       } catch (error) {
-        console.log('Group chat not found or error:', error);
+        
       }
     }
 
@@ -117,18 +117,18 @@ export async function GET(
         // Check if this is an inner group chat - messages are in subcollection
         const innerGroupChatDoc = await db.collection('chats').doc(chatId).get();
         if (innerGroupChatDoc.exists) {
-          console.log('Found inner group chat document, checking messages subcollection');
+          
           const messagesSnapshot = await db.collection('chats').doc(chatId).collection('messages').get();
           if (!messagesSnapshot.empty) {
             messagesSnapshot.forEach(doc => {
               messages.push({ id: doc.id, ...doc.data() });
             });
             chatType = 'innerGroup';
-            console.log(`Found ${messages.length} messages in inner group subcollection`);
+            
           }
         }
       } catch (error) {
-        console.log('Inner group chat not found or error:', error);
+        
       }
     }
 
@@ -136,7 +136,7 @@ export async function GET(
     if (messages.length === 0 && chatId.includes('_')) {
       try {
         const [groupId, innerGroupId] = chatId.split('_');
-        console.log(`Trying to find inner group chat with groupId: ${groupId}, innerGroupId: ${innerGroupId}`);
+        
         
         // Check if the group exists
         const groupDoc = await db.collection('groups').doc(groupId).get();
@@ -144,19 +144,19 @@ export async function GET(
           // Check if the inner group exists
           const innerGroupDoc = await db.collection('groups').doc(groupId).collection('innerGroups').doc(innerGroupId).get();
           if (innerGroupDoc.exists) {
-            console.log('Found inner group document, checking messages subcollection');
+            
             const messagesSnapshot = await db.collection('groups').doc(groupId).collection('innerGroups').doc(innerGroupId).collection('messages').get();
             if (!messagesSnapshot.empty) {
               messagesSnapshot.forEach(doc => {
                 messages.push({ id: doc.id, ...doc.data() });
               });
               chatType = 'innerGroup';
-              console.log(`Found ${messages.length} messages in inner group subcollection`);
+              
             }
           }
         }
       } catch (error) {
-        console.log('Inner group chat not found or error:', error);
+        
       }
     }
 

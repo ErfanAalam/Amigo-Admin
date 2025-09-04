@@ -34,10 +34,21 @@ async function createAdmin() {
   try {
     const email = process.argv[2];
     const password = process.argv[3];
+    const role = process.argv[4] || 'admin';
+    const permissions = process.argv[5] ? process.argv[5].split(',') : [
+      'dashboard', 'manage_groups', 'manage_chats', 'notifications', 'admin_management'
+    ];
     
     if (!email || !password) {
-      console.error('❌ Usage: node createAdminSecure.js <email> <password>');
-      console.error('Example: node createAdminSecure.js admin@amigo.com admin123');
+      console.error('❌ Usage: node createAdminSecure.js <email> <password> [role] [permissions]');
+      console.error('Example: node createAdminSecure.js admin@amigo.com admin123 admin "dashboard,manage_groups,admin_management"');
+      console.error('Available roles: admin, subadmin');
+      console.error('Available permissions: dashboard, manage_groups, manage_chats, notifications, admin_management');
+      process.exit(1);
+    }
+
+    if (!['admin', 'subadmin'].includes(role)) {
+      console.error('❌ Invalid role. Must be "admin" or "subadmin"');
       process.exit(1);
     }
 
@@ -55,9 +66,9 @@ async function createAdmin() {
     // Create admin document in Firestore
     await adminDb.collection('admins').doc(userRecord.uid).set({
       email: email,
-      role: 'admin',
+      role: role,
       createdAt: new Date(),
-      permissions: ['read_users', 'manage_users', 'view_analytics', 'create_admins'],
+      permissions: permissions,
       isActive: true
     });
     
@@ -66,8 +77,10 @@ async function createAdmin() {
     console.log('📧 Email:', email);
     console.log('🆔 UID:', userRecord.uid);
     console.log('🔑 Password:', password);
+    console.log('👑 Role:', role);
+    console.log('🔐 Permissions:', permissions.join(', '));
     console.log('\n⚠️  Important: Save these credentials securely!');
-    console.log('🚀 You can now login to the admin dashboard at https://amigo-admin-eight.vercel.app/');
+    console.log('🚀 You can now login to the admin dashboard');
     
   } catch (error) {
     console.error('❌ Error creating admin:', error.message);

@@ -10,11 +10,8 @@ const TOKEN_EXPIRATION = 3600;
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST request received to /api/agora/token');
-    console.log('Environment variables:', {
-      AGORA_APP_ID: AGORA_APP_ID ? 'Set' : 'Missing',
-      AGORA_APP_CERTIFICATE: AGORA_APP_CERTIFICATE ? 'Set' : 'Missing'
-    });
+    
+    
 
     // For admin panel usage, we'll skip authentication for now
     // In production, you should implement proper admin authentication
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    console.log('Request body:', body);
+    
     
     const { channelName, uid, role = 'publisher' } = body;
 
@@ -75,12 +72,7 @@ export async function POST(request: NextRequest) {
         rtcRole = 1; // PUBLISHER
     }
 
-    console.log('Generating token with:', {
-      channelName,
-      uid,
-      role: rtcRole,
-      expirationTimestamp
-    });
+    
 
     // Generate token
     let rtcToken: string;
@@ -108,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log token generation for monitoring
-    console.log(`Token generated successfully for channel ${channelName}`);
+    
 
     // Return token with metadata
     return NextResponse.json({
@@ -133,7 +125,7 @@ export async function POST(request: NextRequest) {
 
 // GET method for testing (optional - can be removed in production)
 export async function GET(request: NextRequest) {
-  console.log('GET request received to /api/agora/token');
+  
   return NextResponse.json({
     message: 'Agora Token Server is running',
     status: 'active',

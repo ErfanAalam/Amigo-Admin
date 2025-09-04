@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../../utils/firebaseAdmin';
 
+// Allowed admin UIDs who can manage all inner groups
+const ALLOWED_ADMIN_UIDS = [
+  'yBVwfrDoLwOMiEMEIn450Gtqjw43',
+  'Mh4uGEIj44QTUBcT08l2Fuid9h52'
+];
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ innerGroupId: string }> }
@@ -23,6 +29,9 @@ export async function PUT(
     if (!adminDoc.exists) {
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
+
+    const adminData = adminDoc.data();
+    const isMainAdmin = ALLOWED_ADMIN_UIDS.includes(decodedToken.uid) || adminData?.role === 'admin';
 
     const { innerGroupId } = await params;
     const { name, description, startTime, endTime, members } = await request.json();
@@ -51,6 +60,12 @@ export async function PUT(
     const innerGroupDoc = await innerGroupRef.get();
     if (!innerGroupDoc.exists) {
       return NextResponse.json({ error: 'Inner group not found' }, { status: 404 });
+    }
+
+    // Check if user can manage this inner group
+    const innerGroupData = innerGroupDoc.data();
+    if (!isMainAdmin && innerGroupData?.createdBy !== decodedToken.uid) {
+      return NextResponse.json({ error: 'You can only manage your own inner groups' }, { status: 403 });
     }
 
     const updateData = {
@@ -99,6 +114,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
+    const adminData = adminDoc.data();
+    const isMainAdmin = ALLOWED_ADMIN_UIDS.includes(decodedToken.uid) || adminData?.role === 'admin';
+
     const { innerGroupId } = await params;
 
     // Check if the inner group exists
@@ -107,6 +125,12 @@ export async function DELETE(
     
     if (!innerGroupDoc.exists) {
       return NextResponse.json({ error: 'Inner group not found' }, { status: 404 });
+    }
+
+    // Check if user can manage this inner group
+    const innerGroupData = innerGroupDoc.data();
+    if (!isMainAdmin && innerGroupData?.createdBy !== decodedToken.uid) {
+      return NextResponse.json({ error: 'You can only manage your own inner groups' }, { status: 403 });
     }
 
     // Delete the standalone inner group from Firestore

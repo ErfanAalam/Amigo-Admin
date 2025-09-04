@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore, FieldValue } from '../../../../../utils/firebaseAdmin';
 
+// Allowed admin UIDs who can manage all groups
+const ALLOWED_ADMIN_UIDS = [
+  'yBVwfrDoLwOMiEMEIn450Gtqjw43',
+  'Mh4uGEIj44QTUBcT08l2Fuid9h52'
+];
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ groupId: string }> }
@@ -23,6 +29,9 @@ export async function POST(
     if (!adminDoc.exists) {
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
+
+    const adminData = adminDoc.data();
+    const isMainAdmin = ALLOWED_ADMIN_UIDS.includes(decodedToken.uid) || adminData?.role === 'admin';
 
     const { name, startTime, endTime, members } = await request.json();
     const { groupId } = await params;
@@ -50,6 +59,12 @@ export async function POST(
 
     if (!groupDoc.exists) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    // Check if user can manage this group
+    const groupData = groupDoc.data();
+    if (!isMainAdmin && groupData?.createdBy !== decodedToken.uid) {
+      return NextResponse.json({ error: 'You can only manage your own groups' }, { status: 403 });
     }
 
     // Create inner group data
@@ -104,6 +119,9 @@ export async function PUT(
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
+    const adminData = adminDoc.data();
+    const isMainAdmin = ALLOWED_ADMIN_UIDS.includes(decodedToken.uid) || adminData?.role === 'admin';
+
     const { innerGroups } = await request.json();
     const { groupId } = await params;
 
@@ -117,6 +135,12 @@ export async function PUT(
 
     if (!groupDoc.exists) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    // Check if user can manage this group
+    const groupData = groupDoc.data();
+    if (!isMainAdmin && groupData?.createdBy !== decodedToken.uid) {
+      return NextResponse.json({ error: 'You can only manage your own groups' }, { status: 403 });
     }
 
     // Update the group's innerGroups array

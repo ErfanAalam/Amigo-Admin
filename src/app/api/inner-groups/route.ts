@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../utils/firebaseAdmin';
 
+// Allowed admin UIDs who can see all inner groups
+const ALLOWED_ADMIN_UIDS = [
+  'yBVwfrDoLwOMiEMEIn450Gtqjw43',
+  'Mh4uGEIj44QTUBcT08l2Fuid9h52'
+];
+
 export async function GET(request: NextRequest) {
   try {
     // Get the authorization header
@@ -21,9 +27,57 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User is not an admin' }, { status: 403 });
     }
 
-    // Fetch all standalone inner groups
-    const innerGroupsRef = getFirebaseAdminFirestore().collection('standaloneInnerGroups');
-    const querySnapshot = await innerGroupsRef.orderBy('createdAt', 'desc').get();
+    const adminData = adminDoc.data();
+    const isInAllowedList = ALLOWED_ADMIN_UIDS.includes(decodedToken.uid);
+    const hasAdminRole = adminData?.role === 'admin';
+    
+    // TEMPORARY: Only use hardcoded UIDs for main admin status
+    // Remove the role check to test if that's the issue
+    const isMainAdmin = isInAllowedList; // Temporarily removed: || hasAdminRole;
+
+    // Fetch inner groups based on admin permissions
+    let querySnapshot;
+    
+    if (!isMainAdmin) {
+      // Regular admins can only see their own inner groups
+      
+      
+      // Get all inner groups first, then filter client-side to avoid index issues
+      const allInnerGroupsSnapshot = await getFirebaseAdminFirestore()
+        .collection('standaloneInnerGroups')
+        .get();
+      
+      
+      
+      // Filter client-side
+      const filteredDocs = allInnerGroupsSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const matches = data.createdBy === decodedToken.uid;
+        
+        return matches;
+      });
+      
+      
+      
+      // Sort by createdAt descending
+      filteredDocs.sort((a, b) => {
+        const aTime = a.data().createdAt?.toDate?.() || a.data().createdAt || new Date(0);
+        const bTime = b.data().createdAt?.toDate?.() || b.data().createdAt || new Date(0);
+        return bTime - aTime;
+      });
+      
+      // Create a mock query snapshot
+      querySnapshot = {
+        docs: filteredDocs
+      };
+    } else {
+      // Main admins can see all inner groups
+      
+      querySnapshot = await getFirebaseAdminFirestore()
+        .collection('standaloneInnerGroups')
+        .orderBy('createdAt', 'desc')
+        .get();
+    }
     
     const innerGroups = querySnapshot.docs
       .map(doc => {
@@ -39,6 +93,11 @@ export async function GET(request: NextRequest) {
           createdBy: data.createdBy || 'unknown',
         };
       });
+
+    
+    
+    
+    
 
     return NextResponse.json({ 
       success: true, 

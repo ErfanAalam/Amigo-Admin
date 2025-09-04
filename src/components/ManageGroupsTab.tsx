@@ -17,6 +17,7 @@ interface InnerGroup {
     endTime: string;
     members: string[];
     createdAt: Date;
+    createdBy?: string;
 }
 
 interface StandaloneInnerGroup {
@@ -27,6 +28,7 @@ interface StandaloneInnerGroup {
     members: string[];
     createdAt: Date;
     description?: string;
+    createdBy?: string;
 }
 
 interface Group {
@@ -37,6 +39,7 @@ interface Group {
     members: string[];
     createdAt: Date;
     isActive: boolean;
+    createdBy?: string;
 }
 
 interface ManageGroupsTabProps {
@@ -87,11 +90,11 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
 
     // Debug logging for member selection
     useEffect(() => {
-        console.log('selectedMembers state changed:', selectedMembers);
+        
     }, [selectedMembers]);
 
     useEffect(() => {
-        console.log('innerGroupMembers state changed:', innerGroupMembers);
+        
     }, [innerGroupMembers]);
 
     const fetchStandaloneInnerGroups = async () => {
@@ -742,6 +745,15 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
         return safeUsers.find(user => user.uid === userId);
     };
 
+    const getAdminInfo = (adminUid: string) => {
+        // This would typically fetch from an admins collection
+        // For now, we'll return a placeholder
+        return {
+            email: adminUid.substring(0, 8) + '...',
+            displayName: 'Admin'
+        };
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-16">
@@ -776,7 +788,7 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                         </button>
                         <button
                             onClick={() => {
-                                console.log('Opening Create Group modal');
+                                
                                 setSelectedMembers([]); // Reset selection
                                 setGroupName(''); // Reset form
                                 setGroupDescription(''); // Reset form
@@ -908,7 +920,12 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                 
                                 <h4 className="text-lg font-semibold text-gray-900 mb-2">{innerGroup.name}</h4>
                                 {innerGroup.description && (
-                                    <p className="text-sm text-gray-600 mb-3">{innerGroup.description}</p>
+                                    <p className="text-sm text-gray-600 mb-2">{innerGroup.description}</p>
+                                )}
+                                {innerGroup.createdBy && (
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        Created by: {getAdminInfo(innerGroup.createdBy).displayName}
+                                    </p>
                                 )}
                                 
                                 <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1041,6 +1058,11 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
                                         <p className="text-sm text-gray-600">{group.description}</p>
+                                        {group.createdBy && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Created by: {getAdminInfo(group.createdBy).displayName}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -1213,15 +1235,15 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                console.log('Select All button clicked. Current state:', selectedMembers);
+                                                
                                                 const validUsers = safeUsers.filter(user => user.uid);
                                                 if (selectedMembers.length === validUsers.length) {
                                                     // If all are selected, deselect all
-                                                    console.log('Deselecting all users');
+                                                    
                                                     setSelectedMembers([]);
                                                 } else {
                                                     // If not all are selected, select all
-                                                    console.log('Selecting all users');
+                                                    
                                                     setSelectedMembers(validUsers.map(user => user.uid));
                                                 }
                                             }}
@@ -1244,17 +1266,17 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                                         id={`checkbox-group-${user.uid}`}
                                                         checked={isSelected}
                                                         onChange={(e) => {
-                                                        console.log('Checkbox changed for user:', user.uid, 'Checked:', e.target.checked);
+                                                        
                                                         if (e.target.checked) {
                                                             setSelectedMembers(prev => {
                                                                 const newState = [...prev, user.uid];
-                                                                console.log('Adding user, new state:', newState);
+                                                                
                                                                 return newState;
                                                             });
                                                         } else {
                                                             setSelectedMembers(prev => {
                                                                 const newState = prev.filter(id => id !== user.uid);
-                                                                console.log('Removing user, new state:', newState);
+                                                                
                                                                 return newState;
                                                             });
                                                         }
@@ -1362,15 +1384,15 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                console.log('Inner group Select All button clicked. Current state:', innerGroupMembers);
+                                                
                                                 const validUsers = safeUsers.filter(user => user.uid);
                                                 if (innerGroupMembers.length === validUsers.length) {
                                                     // If all are selected, deselect all
-                                                    console.log('Deselecting all users from inner group');
+                                                    
                                                     setInnerGroupMembers([]);
                                                 } else {
                                                     // If not all are selected, select all
-                                                    console.log('Selecting all users for inner group');
+                                                    
                                                     setInnerGroupMembers(validUsers.map(user => user.uid));
                                                 }
                                             }}
@@ -1393,17 +1415,17 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                                         id={`checkbox-inner-group-${user.uid}`}
                                                         checked={isSelected}
                                                         onChange={(e) => {
-                                                        console.log('Inner group checkbox changed for user:', user.uid, 'Checked:', e.target.checked);
+                                                        
                                                         if (e.target.checked) {
                                                             setInnerGroupMembers(prev => {
                                                                 const newState = [...prev, user.uid];
-                                                                console.log('Adding user to inner group, new state:', newState);
+                                                                
                                                                 return newState;
                                                             });
                                                         } else {
                                                             setInnerGroupMembers(prev => {
                                                                 const newState = prev.filter(id => id !== user.uid);
-                                                                console.log('Removing user from inner group, new state:', newState);
+                                                                
                                                                 return newState;
                                                             });
                                                         }
@@ -1656,7 +1678,7 @@ const ManageGroupsTab: React.FC<ManageGroupsTabProps> = ({ users }) => {
                                                    }
                                                    
                                                    // If we still can't get a valid date, try to get it from the raw data
-                                                   console.log('Debug - Attempting to get date from raw data');
+                                                   
                                                    return 'Date not available - Check console for debug info';
                                                  })()}
                                              </p>
